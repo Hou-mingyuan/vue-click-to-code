@@ -14,7 +14,9 @@ export function instrumentSource(code, filename, root) {
   if (!['.vue', '.html', '.jsx', '.tsx', '.js', '.ts', '.mjs'].includes(extension)) return
   const source = relative.replaceAll('\\', '/')
   const s = new MagicString(code)
-  const position = (line, column) => `${source}:${line}:${column}`
+  // Columns are stored 1-based: trace-universal.mjs rejects column 0 and
+  // converts back with `column - 1`, matching the JSX branch below.
+  const position = (line, column) => `${source}:${line}:${column + 1}`
   if (extension === '.vue' || extension === '.html') {
     const ast = parseMarkup(code, { parseMode: extension === '.vue' ? 'sfc' : 'html' })
     function visit(node) {
@@ -47,7 +49,7 @@ export function instrumentSource(code, filename, root) {
       if (node.type === 'JSXOpeningElement') {
         const tag = node.name.type === 'JSXIdentifier' ? node.name.name : node.name.property?.name
         if (tag !== 'Fragment' && !node.attributes.some(prop => prop.type === 'JSXAttribute' && prop.name.name === attribute)) {
-          const value = position(node.loc.start.line, node.loc.start.column + 1)
+          const value = position(node.loc.start.line, node.loc.start.column)
           s.appendLeft(node.name.end, ` ${attribute}={${JSON.stringify(value)}}`)
         }
       }

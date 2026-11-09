@@ -1,3 +1,4 @@
+import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { readFileSync } from 'node:fs'
 import { normalizeOptions } from './options.cjs'
@@ -11,9 +12,17 @@ const clientFile = fileURLToPath(new URL('./universal-client.mjs', import.meta.u
 export default function clickToCode(options = {}) {
   const normalized = normalizeOptions(options)
   let config
+  let root
   return [{
     name: 'click-to-code:universal-vite', enforce: 'pre', apply: 'serve',
-    configResolved(resolved) { config = resolved },
+    configResolved(resolved) {
+      config = resolved
+      // Resolve a relative `root` against the vite config file so "../../"
+      // means "two levels up from vite.config.ts".
+      root = normalized.root !== undefined
+        ? path.resolve(path.dirname(config.configFile ?? config.root), normalized.root)
+        : config.root
+    },
     resolveId(id) {
       if (id === virtualId) return `\0${virtualId}`
       if (id === clientId) return clientFile
@@ -27,17 +36,17 @@ export default function clickToCode(options = {}) {
     },
     transform(code, id) {
       if (id.includes('?')) return
-      return instrumentSource(code, id, config.root)
+      return instrumentSource(code, id, root)
     },
     transformIndexHtml: {
       order: 'pre',
       handler(html, context) {
-        return instrumentSource(html, context.filename, config.root)?.code ?? html
+        return instrumentSource(html, context.filename, root)?.code ?? html
       },
     },
     configureServer(server) {
       server.middlewares.use(createInspectorMiddleware({
-        ...normalized, root: config.root, sourceRoot: config.root, base: config.base,
+        ...normalized, root, sourceRoot: root, base: config.base,
         openInEditor: options.openInEditor,
       }))
     },

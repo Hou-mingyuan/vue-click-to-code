@@ -7,7 +7,7 @@
 ## 安装
 
 ```sh
-npm install -D vue-click-to-code@0.2.0-beta.1
+npm install -D vue-click-to-code@0.2.0-beta.2
 ```
 
 也可安装本地包：`npm install -D ./vue-click-to-code-0.2.0-beta.1.tgz`。安装需要联网获取依赖。需要 Node 20.19+（22 系列需要 22.12+），推荐 Node 24。
@@ -41,6 +41,18 @@ export default defineConfig({
 ```
 
 React 项目保留自己的 `react()`，把 `clickToCode(...)` 放在它之前即可，不需要安装 Vue 运行时。普通 HTML 在 Vite 的 HTML 处理阶段记录原始行列。0.2 的默认导入 `vue-click-to-code` 也指向这个通用 Vite 入口。
+
+**Monorepo 多包项目需要传 `root`。** 默认只注入 Vite root（通常是当前 app 包）内的源码 —— 姊妹包（如 `packages/*/components` 里的封装组件）整体拿不到元素级标记，点击它们只能命中"使用组件的那一行"。传工作区根即可让全部业务包获得行列级定位：
+
+```ts
+clickToCode({
+  editor: 'webstorm',
+  // 相对路径以 vite.config.ts 所在目录解析；也可传绝对路径
+  root: '../../',
+})
+```
+
+`root` 同时是打开文件的安全边界：注入与 IDE 打开都限制在该目录内，node_modules 始终排除。
 
 ## Webpack 5
 
@@ -110,7 +122,7 @@ import clickToCode from 'vue-click-to-code/vue'
 ## 限制
 
 - 定位模板/JSX/组件声明，不自动追踪事件函数或后端业务代码。
-- 只处理项目目录内源码，排除 node_modules；打开接口校验根目录、随机令牌、同源、文件类型及行列。
+- 只处理 `root` 目录内源码（Vite 默认为项目根，monorepo 传工作区根），排除 node_modules；打开接口校验根目录、随机令牌、同源、文件类型及行列。
 - 组件不透传属性时使用 Vue/React 开发态组件信息作为后备，复杂封装和版本差异仍需验证。
 - Angular、Svelte、Astro、Next/Nuxt SSR、Pug、跨域 iframe、Canvas 和后端模板语言没有在此版本中自动适配。
 - 未使用 JSX/模板的手写 DOM 或渲染函数可能只能回溯到最近的有标记组件，不能保证精确到每个元素。

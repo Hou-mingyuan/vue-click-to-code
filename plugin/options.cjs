@@ -20,7 +20,17 @@ function normalizeOptions(options = {}) {
       throw new Error(`clickToCode.editors.${name} 必须是有效的命令或可执行文件路径。`)
     }
   }
-  return { editor, shortcut, editors, token: randomBytes(24).toString('hex') }
+  // Instrumentation and file-open boundary, resolved against the bundler
+  // config by each entry point. Defaults to undefined (bundler root) so
+  // single-package projects keep the previous behaviour; pass the workspace
+  // root to cover sibling packages in a monorepo.
+  const root = options.root
+  if (root !== undefined) {
+    if (typeof root !== 'string' || !root.trim() || /[\r\n\0]/.test(root)) {
+      throw new Error('clickToCode.root 必须是有效的目录路径。')
+    }
+  }
+  return { editor, shortcut, editors, root, token: randomBytes(24).toString('hex') }
 }
 
 module.exports = { normalizeOptions }
