@@ -1,6 +1,6 @@
 {
   "name": "vue-click-to-code",
-  "version": "0.2.0-beta.2",
+  "version": "0.2.0-beta.3",
   "description": "Click Vue, React and HTML elements to open source in VS Code or WebStorm; Vite and Webpack adapters.",
   "type": "module",
   "license": "MIT",

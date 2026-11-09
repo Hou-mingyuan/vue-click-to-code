@@ -7,7 +7,7 @@
 ## 安装
 
 ```sh
-npm install -D vue-click-to-code@0.2.0-beta.2
+npm install -D vue-click-to-code@0.2.0-beta.3
 ```
 
 也可安装本地包：`npm install -D ./vue-click-to-code-0.2.0-beta.1.tgz`。安装需要联网获取依赖。需要 Node 20.19+（22 系列需要 22.12+），推荐 Node 24。
@@ -53,6 +53,8 @@ clickToCode({
 ```
 
 `root` 同时是打开文件的安全边界：注入与 IDE 打开都限制在该目录内，node_modules 始终排除。
+
+**Schema 驱动的表单/表格（0.2.0-beta.3 起）**：由配置数组渲染的控件（如 `{ field: "scopeType", component: "Select" }`），编译时会自动给这类对象字面量（数组内、含 `field` 或 `dataIndex` 键）附加 `__clickToCode` 源码位置；点击渲染出来的控件优先跳到**写配置的那一行**，而不是封装组件的模板行。库组件内部（antd 等 node_modules）仍无标记，点击命中使用它的配置行或最近标记 —— 属预期降级。
 
 ## Webpack 5
 
