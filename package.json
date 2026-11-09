@@ -1,0 +1,62 @@
+{
+  "name": "vue-click-to-code",
+  "version": "0.2.0-beta.1",
+  "description": "Click Vue, React and HTML elements to open source in VS Code or WebStorm; Vite and Webpack adapters.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "vue",
+    "vite",
+    "inspector",
+    "webstorm",
+    "vscode",
+    "devtools"
+  ],
+  "exports": {
+    ".": {
+      "types": "./plugin/vite.d.ts",
+      "import": "./plugin/vite.mjs"
+    },
+    "./vite": { "types": "./plugin/vite.d.ts", "import": "./plugin/vite.mjs" },
+    "./vue": { "types": "./plugin/index.d.ts", "import": "./plugin/index.mjs" },
+    "./webpack": { "types": "./plugin/webpack.d.cts", "import": "./plugin/webpack.cjs", "require": "./plugin/webpack.cjs" }
+  },
+  "files": [
+    "plugin",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --test tests/server.test.mjs tests/root.test.mjs tests/transform.test.mjs",
+    "test:e2e": "playwright test",
+    "test:universal": "playwright test --config playwright.universal.config.mjs",
+    "check": "npm run test && npm run test:e2e && npm run build",
+    "release:prepare": "node scripts/prepare-release.mjs"
+  },
+  "dependencies": {
+    "@babel/parser": "7.29.13",
+    "@vue/compiler-dom": "3.5.45",
+    "launch-editor": "2.14.2",
+    "magic-string": "0.30.21"
+  },
+  "peerDependencies": {
+    "vite": "^6.0.0 || ^7.0.0 || ^8.0.0",
+    "vite-plugin-vue-inspector": "7.0.0",
+    "webpack": "^5.0.0"
+  },
+  "peerDependenciesMeta": { "vite": { "optional": true }, "vite-plugin-vue-inspector": { "optional": true }, "webpack": { "optional": true } },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@vitejs/plugin-vue": "6.0.10",
+    "element-plus": "^2.11.8",
+    "vite": "8.3.6",
+    "vite-plugin-vue-inspector": "7.0.0",
+    "vue": "^3.5.35"
+  }
+}
