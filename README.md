@@ -7,7 +7,7 @@
 ## 安装
 
 ```sh
-npm install -D vue-click-to-code@0.2.0-beta.6
+npm install -D vue-click-to-code@0.2.0-beta.7
 ```
 
 也可安装本地包：`npm install -D ./vue-click-to-code-0.2.0-beta.1.tgz`。安装需要联网获取依赖。需要 Node 20.19+（22 系列需要 22.12+），推荐 Node 24。
@@ -52,9 +52,23 @@ clickToCode({
 })
 ```
 
-`root` 同时是打开文件的安全边界：注入与 IDE 打开都限制在该目录内，node_modules 始终排除。
+`root` 同时是打开文件的安全边界：注入与 IDE 打开都限制在该目录内；node_modules 默认排除，可用下面的 `includePackages` 放行自家的包。
 
-**Schema 驱动的表单/表格（0.2.0-beta.3 起）**：由配置数组渲染的控件（如 `{ field: "scopeType", component: "Select" }`），编译时会自动给这类对象字面量（数组内、含 `field` 或 `dataIndex` 键）附加 `__clickToCode` 源码位置；点击渲染出来的控件优先跳到**写配置的那一行**，而不是封装组件的模板行。封装层（表格/表单组件）内部重建配置对象也没关系（0.2.0-beta.4 起）——运行时按字段名把点击的控件关联回祖先组件 props 里的原始 schema 数组。页面通过 `register` 回调等方式把 schema 传给封装组件、数组从不出现在 props 里时（0.2.0-beta.6 起），会继续浅扫祖先组件的 `setupState`（如 `innerPropsRef.formConfig.schemas`、`columns`）完成同样的关联。库组件内部（antd 等 node_modules）仍无标记，点击命中使用它的配置行或最近标记 —— 属预期降级。
+**注入自家 npm 包（0.2.0-beta.7 起）：** 公司内部组件库（如 `@dsf/antdv-ui`）以构建产物（dist 里的 rollup bundle）形式安装时，默认不注入。把包名前缀加进白名单即可让它们也获得元素级标记：
+
+```ts
+clickToCode({
+  editor: 'webstorm',
+  root: '../../',
+  includePackages: ['@dsf/'],
+})
+```
+
+前缀规则：`'@dsf/'` 放行整个 scope（`@dsf/antdv-ui`、`@dsf/icons` 等）；`'@dsf/antdv-ui'` 只放行精确匹配的包。第三方包（antd、element-plus 等）不建议放行 —— 它们的源码不在你本机，点击跳过去没有意义。
+
+**Schema 驱动的表单/表格（0.2.0-beta.3 起）**：由配置数组渲染的控件（如 `{ field: "scopeType", component: "Select" }`），编译时会自动给这类对象字面量（数组内、含 `field` 或 `dataIndex` 键）附加 `__clickToCode` 源码位置；点击渲染出来的控件优先跳到**写配置的那一行**，而不是封装组件的模板行。封装层（表格/表单组件）内部重建配置对象也没关系（0.2.0-beta.4 起）——运行时按字段名把点击的控件关联回祖先组件 props 里的原始 schema 数组。页面通过 `register` 回调等方式把 schema 传给封装组件、数组从不出现在 props 里时（0.2.0-beta.6 起），会继续浅扫祖先组件的 `setupState`（如 `innerPropsRef.formConfig.schemas`、`columns`）完成同样的关联。`Input` 等会把模板标记透传到 DOM 的控件（0.2.0-beta.7 起）同样优先命中配置行。库组件内部（antd 等 node_modules）仍无标记，点击命中使用它的配置行或最近标记 —— 属预期降级。
+
+**按钮类 actions 配置（0.2.0-beta.7 起）**：数组内含 `handleClick` 或 `onClick` 键的对象（如工具栏 `[{ label: '新增', handleClick: ... }]`）同样附加位置标记；封装层用 `v-bind` 把整个配置对象展开进按钮组件时，点击按钮直接跳到写这条配置的行 —— 按对象引用关联，与按钮的显示顺序无关。
 
 ## Webpack 5
 

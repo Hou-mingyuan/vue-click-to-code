@@ -30,7 +30,15 @@ function normalizeOptions(options = {}) {
       throw new Error('clickToCode.root 必须是有效的目录路径。')
     }
   }
-  return { editor, shortcut, editors, root, token: randomBytes(24).toString('hex') }
+  // Package-name prefixes allowed inside node_modules (e.g. ["@dsf/"] or
+  // ["@dsf/antdv-ui"]). Dist bundles of first-party libraries are then
+  // instrumented too, so clicks can land inside the library's own code.
+  const includePackages = options.includePackages ?? []
+  if (!Array.isArray(includePackages)
+      || includePackages.some(name => typeof name !== 'string' || !name.trim() || /[\r\n\0]/.test(name))) {
+    throw new Error('clickToCode.includePackages 必须是包名前缀数组，例如 ["@dsf/"] 或 ["@dsf/antdv-ui"]。')
+  }
+  return { editor, shortcut, editors, root, includePackages, token: randomBytes(24).toString('hex') }
 }
 
 module.exports = { normalizeOptions }

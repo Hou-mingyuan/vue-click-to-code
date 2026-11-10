@@ -4,7 +4,7 @@ export const SCHEMA_ATTRIBUTE = '__clickToCode'
 function fromValue(value, element) {
   if (typeof value !== 'string') return
   const match = value.match(/^(.+):(\d+):(\d+)$/)
-  if (!match || match[1].replaceAll('\\', '/').split('/').includes('node_modules')) return
+  if (!match) return
   const line = Number(match[2]), column = Number(match[3])
   if (!Number.isSafeInteger(line) || !Number.isSafeInteger(column) || line < 1 || column < 1) return
   // The UI uses zero-based columns internally; markers use human-readable columns.
@@ -105,11 +105,18 @@ function traceFromSetupState(instances, fieldKey, element) {
 }
 
 export function traceElement(element) {
+  // A direct DOM marker (often a transparently-forwarded template marker)
+  // wins over nothing below, but schema correlation is more precise: an
+  // Input-flavoured schema control carries the generic renderer's template
+  // line on its DOM while the actual business line sits in the page's schema
+  // array. So try prop-object markers and schema correlation first, and keep
+  // the DOM marker as a late fallback.
   const direct = fromValue(element.getAttribute(SOURCE_ATTRIBUTE), element)
-  if (direct) return direct
   // Vue 3 component ownership also works for teleported third-party controls.
-  // Phase 1: walk for a marker carried directly on a prop object (highest
-  // precision) while collecting the clicked field name and each level's props.
+  // Phase 1: walk for a marker carried directly on a prop object or as a
+  // top-level prop (highest precision — e.g. action configs spread onto a
+  // button component by v-bind) while collecting the clicked field name and
+  // each level's props.
   // Phase 2: correlate the field name against original schema arrays still
   // held by ancestors. Only then fall back to template markers.
   const visited = new Set()
@@ -124,7 +131,7 @@ export function traceElement(element) {
       if (!props) continue
       vue3Props.push(props)
       fieldKey ??= fieldKeyOf(props)
-      const trace = traceFromProps(props, element)
+      const trace = traceFromProps(props, element) ?? fromValue(props[SCHEMA_ATTRIBUTE], element)
       if (trace) return trace
     }
   }
@@ -136,6 +143,7 @@ export function traceElement(element) {
     const trace = traceFromSetupState(vue3Instances, fieldKey, element)
     if (trace) return trace
   }
+  if (direct) return direct
   for (const props of vue3Props) {
     const trace = fromValue(props?.[SOURCE_ATTRIBUTE], element)
     if (trace) return trace

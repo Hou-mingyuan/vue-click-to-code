@@ -5,7 +5,7 @@ import MagicString from 'magic-string'
 
 const attribute = 'data-click-to-code'
 const schemaKey = '__clickToCode'
-const schemaHints = new Set(['field', 'dataIndex'])
+const schemaHints = new Set(['field', 'dataIndex', 'handleClick', 'onClick'])
 const skipTags = new Set(['template', 'script', 'style', 'html', 'head', 'meta', 'link', 'title', 'slot'])
 const escapeAttribute = value => value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;')
 
@@ -44,9 +44,68 @@ function instrumentSchemaObjects(script, offsets, docPosition, s) {
   }
 }
 
-export function instrumentSource(code, filename, root) {
+// First-party library dist bundles import Vue's vnode factories under local
+// aliases (`import { createVNode as d } from "vue"`), so resolve the aliases
+// from the import statements first, then mark element calls whose first
+// argument is a plain tag string.
+const runtimeFactories = ['createVNode', 'createElementVNode', 'createElementBlock', 'createBlock', 'h']
+function instrumentRuntimeVNodes(code, s, position) {
+  let ast
+  try {
+    ast = parseJavaScript(code, { sourceType: 'module', allowAwaitOutsideFunction: true, plugins: ['decorators-legacy'] })
+  } catch { return }
+  const factories = new Set()
+  for (const node of ast.program.body) {
+    if (node.type !== 'ImportDeclaration' || node.source.value !== 'vue') continue
+    for (const spec of node.specifiers) {
+      if (spec.type === 'ImportSpecifier' && runtimeFactories.includes(spec.imported.name)) factories.add(spec.local.name)
+    }
+  }
+  if (!factories.size) return
+  const stack = [ast]
+  while (stack.length) {
+    const node = stack.pop()
+    if (!node || typeof node !== 'object') continue
+    if (node.type === 'CallExpression' && factories.has(node.callee?.name)
+        && node.arguments[0]?.type === 'StringLiteral' && /^[a-zA-Z][\w-]*$/.test(node.arguments[0].value)) {
+      const value = JSON.stringify(position(node.loc.start.line, node.loc.start.column))
+      const arg1 = node.arguments[1]
+      if (!arg1) {
+        s.appendLeft(node.arguments[0].end, `, { '${attribute}': ${value} }`)
+      } else if (arg1.type === 'NullLiteral') {
+        // `createVNode(tag, null, ...)` — replace null with a props object;
+        // semantically equivalent (there were no props).
+        s.overwrite(arg1.start, arg1.end, `{ '${attribute}': ${value} }`)
+      } else if (arg1.type === 'ObjectExpression'
+          && !arg1.properties.some(prop => prop.type === 'ObjectProperty' && !prop.computed && (prop.key.name ?? prop.key.value) === attribute)) {
+        // Hyphenated key must be quoted inside a JS object literal.
+        s.appendLeft(arg1.start + 1, `'${attribute}': ${value},`)
+      }
+    }
+    for (const [key, value] of Object.entries(node)) {
+      if (['loc', 'comments', 'tokens'].includes(key)) continue
+      if (Array.isArray(value)) stack.push(...value)
+      else if (value && typeof value === 'object' && value.type) stack.push(value)
+    }
+  }
+}
+
+export function instrumentSource(code, filename, root, includePackages = []) {
   const relative = path.relative(root, filename)
-  if (!relative || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative) || relative.split(path.sep).includes('node_modules')) return
+  if (!relative || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) return
+  const segments = relative.split(path.sep)
+  const nmIndex = segments.indexOf('node_modules')
+  let inLibrary = false
+  if (nmIndex !== -1) {
+    const pkg = segments[nmIndex + 1]?.startsWith('@')
+      ? `${segments[nmIndex + 1]}/${segments[nmIndex + 2]}`
+      : segments[nmIndex + 1]
+    if (!pkg) return
+    const allowed = includePackages.some(prefix =>
+      prefix.endsWith('/') ? pkg.startsWith(prefix) : pkg === prefix || pkg.startsWith(`${prefix}/`))
+    if (!allowed) return
+    inLibrary = true
+  }
   const extension = path.extname(filename).toLowerCase()
   if (!['.vue', '.html', '.jsx', '.tsx', '.js', '.ts', '.mjs'].includes(extension)) return
   const source = relative.replaceAll('\\', '/')
@@ -85,6 +144,8 @@ export function instrumentSource(code, filename, root) {
       if (extension === '.vue' && node.tag !== 'template') continue
       visit(node)
     }
+  } else if (inLibrary) {
+    instrumentRuntimeVNodes(code, s, position)
   } else {
     if (!code.includes('<')) return
     const ast = parseJavaScript(code, {

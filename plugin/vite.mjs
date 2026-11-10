@@ -38,12 +38,12 @@ export default function clickToCode(options = {}) {
     },
     transform(code, id) {
       if (id.includes('?')) return
-      return instrumentSource(code, id, root)
+      return instrumentSource(code, id, root, normalized.includePackages)
     },
     transformIndexHtml: {
       order: 'pre',
       handler(html, context) {
-        return instrumentSource(html, context.filename, root)?.code ?? html
+        return instrumentSource(html, context.filename, root, normalized.includePackages)?.code ?? html
       },
     },
     configureServer(server) {

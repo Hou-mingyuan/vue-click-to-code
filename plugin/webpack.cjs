@@ -25,8 +25,16 @@ function createWebpackInspector(options = {}) {
         compiler.options.entry = typeof entry === 'function' ? async () => injectEntry(await entry()) : injectEntry(entry)
         compiler.options.module.rules.unshift({
           test: /\.(vue|jsx|tsx|js|ts|mjs|html)$/,
-          exclude: /[\\/]node_modules[\\/]/,
-          enforce: 'pre', use: [{ loader, options: { root } }],
+          exclude: normalized.includePackages.length
+            ? filepath => {
+                const match = filepath.match(/[\\/]node_modules[\\/]((?:@[^\\/]+[\\/])?[^\\/]+)/)
+                if (!match) return false
+                const pkg = match[1].replaceAll('\\', '/')
+                return !normalized.includePackages.some(prefix =>
+                  prefix.endsWith('/') ? pkg.startsWith(prefix) : pkg === prefix || pkg.startsWith(`${prefix}/`))
+              }
+            : /[\\/]node_modules[\\/]/,
+          enforce: 'pre', use: [{ loader, options: { root, includePackages: normalized.includePackages } }],
         })
         new compiler.webpack.DefinePlugin({ __CLICK_TO_CODE_BOOTSTRAP__: JSON.stringify({
           editor: normalized.editor, shortcut: normalized.shortcut, token: normalized.token,

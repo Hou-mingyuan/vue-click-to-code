@@ -21,6 +21,14 @@ export interface ClickToCodeOptions {
    * vite.config.ts) so sibling packages get element-level markers too.
    */
   root?: string
+  /**
+   * Package-name prefixes inside node_modules that should also be
+   * instrumented (e.g. ["@dsf/"] or ["@dsf/antdv-ui"]). Use it for
+   * first-party libraries shipped as readable dist bundles: element clicks
+   * can then land inside the library's own code instead of the nearest
+   * business wrapper.
+   */
+  includePackages?: string[]
   /** Override the launcher, useful for remote development or integration testing. */
   openInEditor?: (location: SourceLocation) => void | Promise<void>
 }
