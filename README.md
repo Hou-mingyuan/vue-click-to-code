@@ -7,7 +7,7 @@
 ## 安装
 
 ```sh
-npm install -D vue-click-to-code@0.2.0-beta.9
+npm install -D vue-click-to-code@0.2.0-beta.10
 ```
 
 也可安装本地包：`npm install -D ./vue-click-to-code-0.2.0-beta.1.tgz`。安装需要联网获取依赖。需要 Node 20.19+（22 系列需要 22.12+），推荐 Node 24。
@@ -24,6 +24,20 @@ npm install -D vue-click-to-code@0.2.0-beta.9
 Vite 兼容声明为 6/7/8，集成验证使用 Vite 8。Vue 2 + Vite、React + Webpack、Vue 3 + Webpack 尚未逐一集成验证。Vue CLI 需要匹配底层 Webpack/dev-server 版本；Webpack 4/dev-server 3 暂不支持。
 
 ## Vite：Vue / React / HTML
+
+两种接入方式任选其一：**零配置 hook 模式**（不改 vite.config.ts）或常规插件注册。
+
+### 零配置 hook 模式（pnpm，0.2.0-beta.10 起）
+
+不想动 `vite.config.ts` 的项目，在**运行 `pnpm dev` 的那个包目录**放一个 `.npmrc`（本地配置文件，可加入 .gitignore）：
+
+```ini
+node-options=--import ./node_modules/vue-click-to-code/plugin/hook.mjs
+```
+
+装上依赖后 `pnpm dev` 照常跑：hook 检测到 vite dev 进程时注册模块 loader，把插件注入 `createServer`，配置文件零改动。编辑器自动探测（优先 `VUE_CLICK_TO_CODE_EDITOR` 环境变量，其次按安装路径找 WebStorm / VS Code），root 自动向上找 pnpm-workspace.yaml / package.json workspaces 作为工作区根。`build` / `preview` / `optimize` 与 lint、test 等其他命令不受影响（loader 不注册）。限制：仅 pnpm（node-options 配置）；Vite 的 dev CLI 进程（`vite` / `vite dev` / `vite serve`）。
+
+### 常规插件注册
 
 在已有配置里添加插件，放在框架编译插件之前：
 
