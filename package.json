@@ -1,6 +1,6 @@
 {
   "name": "vue-click-to-code",
-  "version": "0.2.0-beta.5",
+  "version": "0.2.0-beta.6",
   "description": "Click Vue, React and HTML elements to open source in VS Code or WebStorm; Vite and Webpack adapters.",
   "type": "module",
   "license": "MIT",
@@ -17,9 +17,19 @@
       "types": "./plugin/vite.d.ts",
       "import": "./plugin/vite.mjs"
     },
-    "./vite": { "types": "./plugin/vite.d.ts", "import": "./plugin/vite.mjs" },
-    "./vue": { "types": "./plugin/index.d.ts", "import": "./plugin/index.mjs" },
-    "./webpack": { "types": "./plugin/webpack.d.cts", "import": "./plugin/webpack.cjs", "require": "./plugin/webpack.cjs" }
+    "./vite": {
+      "types": "./plugin/vite.d.ts",
+      "import": "./plugin/vite.mjs"
+    },
+    "./vue": {
+      "types": "./plugin/index.d.ts",
+      "import": "./plugin/index.mjs"
+    },
+    "./webpack": {
+      "types": "./plugin/webpack.d.cts",
+      "import": "./plugin/webpack.cjs",
+      "require": "./plugin/webpack.cjs"
+    }
   },
   "files": [
     "plugin",
@@ -50,7 +60,17 @@
     "vite-plugin-vue-inspector": "7.0.0",
     "webpack": "^5.0.0"
   },
-  "peerDependenciesMeta": { "vite": { "optional": true }, "vite-plugin-vue-inspector": { "optional": true }, "webpack": { "optional": true } },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    },
+    "vite-plugin-vue-inspector": {
+      "optional": true
+    },
+    "webpack": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
     "@vitejs/plugin-vue": "6.0.10",

@@ -28,6 +28,11 @@ function traceFromProps(props, element) {
 }
 
 const FIELD_KEYS = ['key', 'field', 'dataIndex']
+// Schema items carry `field`/`key`; table column items carry `dataIndex`.
+// The same name often exists in both (a filter for a column), and a click on
+// a filter control should win over the column definition, so match schema
+// keys first and only accept dataIndex on a second pass.
+const SCHEMA_FIELD_KEYS = ['key', 'field']
 
 // The field name the clicked control is bound to, e.g. the rebuilt
 // { key: "scopeType", component: "Select" } handed down as formModel/item.
@@ -45,12 +50,55 @@ function fieldKeyOf(props) {
 // the injected marker (e.g. the original schemas passed to a table/form).
 function traceFromArray(props, fieldKey, element) {
   if (!props) return
-  for (const value of Object.values(props)) {
-    if (!Array.isArray(value)) continue
-    for (const item of value) {
-      if (!item || typeof item !== 'object' || Array.isArray(item)) continue
-      if (fieldKey !== undefined && !FIELD_KEYS.some(key => item[key] === fieldKey)) continue
-      const trace = fromValue(item[SCHEMA_ATTRIBUTE], element)
+  for (const keys of [SCHEMA_FIELD_KEYS, FIELD_KEYS]) {
+    for (const value of Object.values(props)) {
+      if (!Array.isArray(value)) continue
+      for (const item of value) {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) continue
+        if (fieldKey !== undefined && !keys.some(key => item[key] === fieldKey)) continue
+        const trace = fromValue(item[SCHEMA_ATTRIBUTE], element)
+        if (trace) return trace
+      }
+    }
+  }
+}
+
+// Pages often hand the original schema array to a wrapper through a
+// register-callback or provide/inject instead of a template binding, so no
+// vnode.props on the chain owns it — but the wrapper component keeps it in
+// script-setup state (innerPropsRef.formConfig.schemas, columns, ...).
+// Shallow-scan each ancestor's setupState for marked arrays and correlate
+// by field name. Depth/keys are bounded; every access is guarded.
+function traceFromSetupState(instances, fieldKey, element) {
+  const seen = new Set()
+  for (const instance of instances) {
+    let state
+    try { state = instance.setupState } catch { continue }
+    if (!state || typeof state !== 'object') continue
+    const walk = (value, depth, keys) => {
+      if (!value || typeof value !== 'object' || seen.has(value) || depth > 3) return
+      seen.add(value)
+      if (Array.isArray(value)) {
+        for (const item of value) {
+          if (!item || typeof item !== 'object' || Array.isArray(item)) continue
+          if (fieldKey !== undefined && !keys.some(key => item[key] === fieldKey)) continue
+          const trace = fromValue(item[SCHEMA_ATTRIBUTE], element)
+          if (trace) return trace
+        }
+        return
+      }
+      for (const key of Object.keys(value).slice(0, 80)) {
+        let child
+        try { child = value[key] } catch { continue }
+        if (!child || typeof child !== 'object') continue
+        const trace = walk(child, depth + 1, keys)
+        if (trace) return trace
+      }
+    }
+    for (const keys of [SCHEMA_FIELD_KEYS, FIELD_KEYS]) {
+      seen.clear()
+      let trace
+      try { trace = walk(state, 0, keys) } catch { continue }
       if (trace) return trace
     }
   }
@@ -66,10 +114,12 @@ export function traceElement(element) {
   // held by ancestors. Only then fall back to template markers.
   const visited = new Set()
   const vue3Props = []
+  const vue3Instances = []
   let fieldKey
   for (const start of [element.__vueParentComponent, element.__vnode?.ctx]) {
     for (let instance = start; instance && !visited.has(instance); instance = instance.parent) {
       visited.add(instance)
+      vue3Instances.push(instance)
       const props = instance.vnode?.props
       if (!props) continue
       vue3Props.push(props)
@@ -83,6 +133,8 @@ export function traceElement(element) {
       const trace = traceFromArray(props, fieldKey, element)
       if (trace) return trace
     }
+    const trace = traceFromSetupState(vue3Instances, fieldKey, element)
+    if (trace) return trace
   }
   for (const props of vue3Props) {
     const trace = fromValue(props?.[SOURCE_ATTRIBUTE], element)
