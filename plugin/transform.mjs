@@ -5,7 +5,11 @@ import MagicString from 'magic-string'
 
 const attribute = 'data-click-to-code'
 const schemaKey = '__clickToCode'
-const schemaHints = new Set(['field', 'dataIndex', 'handleClick', 'onClick'])
+// Objects inside arrays that carry any of these keys get a __clickToCode
+// marker: form/table schema entries (field/dataIndex), action buttons
+// (handleClick/onClick) and pagination config (strong signals only —
+// pageSize/current alone are too generic to trust).
+const schemaHints = new Set(['field', 'dataIndex', 'handleClick', 'onClick', 'defaultPageSize', 'pageSizeOptions', 'showSizeChanger', 'showQuickJumper'])
 const skipTags = new Set(['template', 'script', 'style', 'html', 'head', 'meta', 'link', 'title', 'slot'])
 const escapeAttribute = value => value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;')
 
@@ -23,17 +27,17 @@ function instrumentSchemaObjects(script, offsets, docPosition, s) {
     })
   } catch { return }
   const parented = []
-  const walk = (node, parent) => {
+  const walk = (node) => {
     if (!node || typeof node !== 'object') return
-    if (node.type === 'ObjectExpression' && parent?.type === 'ArrayExpression') parented.push({ node, parent })
+    if (node.type === 'ObjectExpression') parented.push(node)
     for (const [key, value] of Object.entries(node)) {
       if (['loc', 'comments', 'tokens'].includes(key)) continue
-      if (Array.isArray(value)) for (const item of value) walk(item, node)
-      else if (value && typeof value === 'object' && value.type) walk(value, node)
+      if (Array.isArray(value)) for (const item of value) walk(item)
+      else if (value && typeof value === 'object' && value.type) walk(value)
     }
   }
-  walk(ast.program, null)
-  for (const { node } of parented) {
+  walk(ast.program)
+  for (const node of parented) {
     const keys = node.properties.filter(prop => prop.type === 'ObjectProperty' && !prop.computed)
     const hinted = keys.some(prop => (prop.key.type === 'Identifier' || prop.key.type === 'StringLiteral') && schemaHints.has(prop.key.value ?? prop.key.name))
     if (!hinted || keys.some(prop => prop.key.type === 'Identifier' && prop.key.name === schemaKey)) continue

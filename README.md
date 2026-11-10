@@ -7,7 +7,7 @@
 ## 安装
 
 ```sh
-npm install -D vue-click-to-code@0.2.0-beta.8
+npm install -D vue-click-to-code@0.2.0-beta.9
 ```
 
 也可安装本地包：`npm install -D ./vue-click-to-code-0.2.0-beta.1.tgz`。安装需要联网获取依赖。需要 Node 20.19+（22 系列需要 22.12+），推荐 Node 24。
@@ -68,7 +68,7 @@ clickToCode({
 
 **Schema 驱动的表单/表格（0.2.0-beta.3 起）**：由配置数组渲染的控件（如 `{ field: "scopeType", component: "Select" }`），编译时会自动给这类对象字面量（数组内、含 `field` 或 `dataIndex` 键）附加 `__clickToCode` 源码位置；点击渲染出来的控件优先跳到**写配置的那一行**，而不是封装组件的模板行。封装层（表格/表单组件）内部重建配置对象也没关系（0.2.0-beta.4 起）——运行时按字段名把点击的控件关联回祖先组件 props 里的原始 schema 数组。页面通过 `register` 回调等方式把 schema 传给封装组件、数组从不出现在 props 里时（0.2.0-beta.6 起），会继续浅扫祖先组件的 `setupState`（如 `innerPropsRef.formConfig.schemas`、`columns`）完成同样的关联。`Input` 等会把模板标记透传到 DOM 的控件（0.2.0-beta.7 起）同样优先命中配置行。库组件内部（antd 等 node_modules）仍无标记，点击命中使用它的配置行或最近标记 —— 属预期降级。
 
-**按钮类 actions 配置（0.2.0-beta.7 起）**：数组内含 `handleClick` 或 `onClick` 键的对象（如工具栏 `[{ label: '新增', handleClick: ... }]`）同样附加位置标记；封装层用 `v-bind` 把整个配置对象展开进按钮组件时，点击按钮直接跳到写这条配置的行 —— 按对象引用关联，与按钮的显示顺序无关。
+**按钮类 actions 配置（0.2.0-beta.7 起）**：数组内含 `handleClick` 或 `onClick` 键的对象（如工具栏 `[{ label: '新增', handleClick: ... }]`）同样附加位置标记；封装层用 `v-bind` 把整个配置对象展开进按钮组件时，点击按钮直接跳到写这条配置的行 —— 按对象引用关联，与按钮的显示顺序无关。分页配置（含 `defaultPageSize`/`pageSizeOptions`/`showSizeChanger`/`showQuickJumper` 的对象，0.2.0-beta.9 起）同理 —— 点击分页条跳到页面里写 `pagination: {...}` 的行。标记注入不限于数组内：任何位置的对象字面量命中上述键即注入。
 
 ## Webpack 5
 
