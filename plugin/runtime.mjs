@@ -133,7 +133,7 @@ function draw(trace) {
   if (!rect) return hide()
   current = trace
   Object.assign(box.style, { display: 'block', left: `${rect.left}px`, top: `${rect.top}px`, width: `${rect.width}px`, height: `${rect.height}px` })
-  tip.textContent = `${trace.filepath}:${trace.pos[1]}:${Math.max(1, trace.pos[2] + 1)}  ↗`
+  tip.textContent = `${trace.filepath}:${trace.pos[1]}:${Math.max(1, trace.pos[2] + 1)}  ↻ v${options.runtimeVersion ?? '?'}`
   Object.assign(tip.style, { display: 'block', left: `${Math.max(8, Math.min(rect.left, innerWidth - 320))}px`, top: `${rect.top > 40 ? rect.top - 35 : Math.min(innerHeight - 40, rect.bottom + 6)}px` })
 }
 
